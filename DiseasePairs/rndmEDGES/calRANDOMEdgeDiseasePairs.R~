@@ -1,0 +1,286 @@
+##
+# Calculate each diease-pair overlap/seperation on a selected  
+# synaptic PPI network models, based on analysis described in: 
+# Menche, J. et al. Uncovering disease-disease relationships through the incomplete interactome.
+# Science, 347, (6224):1257601 (2015).
+##
+
+source('../../setUp.R')
+library(WGCNA) #for it's qvalue calculation
+library(data.table)
+
+makeBold <- function(src, bolder) {
+    require(purrr)
+    if (!is.factor(src)) src <- factor(src)                   # make sure it's a factor
+    src_levels <- levels(src)                                 # retrieve the levels in their order
+    temp <- bolder %in% src_levels                          # make sure everything we want to make bold is actually in the factor levels
+    if (all(temp)) {                                         # if so
+        b_pos <- purrr::map_int(bolder, ~which(.==src_levels)) # then find out where they are
+        b_vec <- rep("plain", length(src_levels))               # make'm all plain first
+        b_vec[b_pos] <- "bold"                                  # make our targets bold
+        b_vec                                                   # return the new vector
+    } else {
+        stop("All elements of 'bolder' must be in src")
+    }
+}
+
+
+qscore <- function(zz,FDR){
+
+    LL <- FDR[FDR[,1] < as.numeric(zz),2]
+
+    if( length(LL) != 0 ){    
+        return(LL[end(LL)[1]])
+    }
+
+    return(1)
+}
+
+logScale <- function(x){
+    x = as.numeric(x)
+    return(-log10(x))
+}
+
+sig <- function(x, alpha=0.05){
+    x = as.numeric(x)
+
+    res = x >= -log10(alpha)
+
+    res = ifelse(res==TRUE,1,0)
+    
+    return(res)
+    
+}
+
+
+formatData <- function(FF,label=""){
+
+    sabIDX <- which(grepl("sAB",colnames(FF),fixed=T)==TRUE)
+
+    zsIDX  <- which(grepl("zScore",colnames(FF),fixed=T)==TRUE)
+    
+    BonIDX <- which(grepl("Bonferroni",colnames(FF),fixed=T)==TRUE)
+
+    pvIDX  <- which(grepl("pvalue",colnames(FF),fixed=T)==TRUE)
+
+    qvIDX  <- which(grepl("q-value",colnames(FF),fixed=T)==TRUE)    
+    
+    DDpairs <- sprintf("%s-%s",FF[,3],FF[,7])
+
+    oo     <- matrix(0, ncol=8, nrow=length(DDpairs) )
+    colnames(oo) <- c("disA","disB","pairs","sAB","zscore","pvalue","qvalue","label")
+    oo[,1] <- as.character(FF[,3])
+    oo[,2] <- as.character(FF[,7])
+    oo[,3] <- as.character(DDpairs)
+    oo[,4] <- as.character(FF[,sabIDX[1]])
+    oo[,5] <- as.character(FF[,zsIDX[1]])
+    oo[,6] <- as.character(FF[,pvIDX[1]])
+    oo[,7] <- as.character(FF[,qvIDX[1]])
+    oo[,8] <- rep(label,length(DDpairs))
+
+    df <- as.data.frame(oo)
+
+    return(df)
+}
+
+massageData <- function(DFpv, errorRate, targets=NULL, alpha=0.05){
+
+    #number of columns
+    N  = ncol(DFpv)
+    
+    # filter1, remove "AUT-ASD" pairing
+    indx1 = grepl("AUT",DFpv[,1]) & grepl("ASD",DFpv[,2])
+    indx1 = !indx1
+
+    #filter2, remove self pairs
+    indx2 = DFpv[,1] == DFpv[,2]
+    indx2 = !indx2
+
+    DFpv   = DFpv  [indx1&indx2,]
+    #----
+    
+    #filter3, remove target pairs
+    if( !is.null(targets) ){
+        if( length(targets) != 0 ){
+            indx = rep(FALSE,length(DFpv[,1]))
+            for( i in 1:length(targets) ){
+                for( j in 1:length(targets) ){
+                    indx1 = grepl(targets[i],DFpv[,1]) & grepl(targets[j],DFpv[,2])
+                    indx2 = grepl(targets[j],DFpv[,1]) & grepl(targets[i],DFpv[,2])
+                    indx  = indx | (indx1 | indx2)                    
+                }
+            }
+            DFpv   = DFpv[indx,]
+        }
+    }
+    #----
+    
+
+    #scaling
+   
+
+    DFpv[,3:N]  = apply(DFpv[,3:N],2,logScale)
+
+    DFsig       = DFpv
+    DFsig[,3:N] = apply(DFpv[,3:N],2,sig,alpha=alpha)
+    
+    #---
+
+    DF = data.frame(a=as.character(),b=as.numeric(),c=as.numeric(),d=as.numeric())
+
+    for( i in 1:length(DFpv[,1]) ){
+
+        tmp = data.frame(a=rep(sprintf("%s-%s",DFpv[i,1],DFpv[i,2]),length(errorRate)),b=as.numeric(errorRate),c=as.numeric(DFpv[i,3:N]),d=as.numeric(DFsig[i,3:N]))       
+        DF = rbind(DF,tmp)
+    
+    }
+
+    return(DF)
+    
+}
+
+##---Check or create output dir called RESULTS
+if( !file_test("-d","RESULTS") ){
+    dir.create("RESULTS")
+}
+
+resdir1 <- sprintf("RESULTS/%s",subDIR[S])
+
+if( !file_test("-d",resdir1) ){
+    dir.create(resdir1)
+}
+
+resdir <- sprintf("%s/%s",resdir1,gdaDIR[gdas])
+
+if( !file_test("-d",resdir) ){
+    dir.create(resdir)
+}
+#---
+
+OUT    <- vector(length=2)
+OUT[1] <- "Random_Edges_Disease_Pairs"
+OUT[2] <- "MERGED"
+
+baseName  <- "sAB_random_separation"
+errorRate <- seq(0,1,0.1)
+fOrder    <- sprintf("%s_%g.csv.gz",baseName,errorRate)
+
+path   = sprintf("%s/%s/%s/%s",rndDIR[1],OUT[1],subDIR[S],OUT[2])
+files  = list.files(path=path)
+files  = files[match(fOrder,files)]
+nfiles = length(files)
+
+sAB <- list()
+
+for( f in 1:nfiles ){
+
+    st1 = sprintf("%s/%s",path,files[f])
+
+    if( file.exists(st1) && file.info(st1)$size!=0 ){
+        tmp      = fread(st1)
+        tmp      = tmp[-1,]
+        sAB[[f]] = tmp
+        names(sAB)[f] = sprintf("%g",errorRate[f])
+        rm(tmp)
+    }
+    
+}
+
+sABmean <- list()
+sABsd   <- list()
+
+for( i in 1:length(sAB) ){
+
+    tmp  = sAB[[i]]
+    NC   = ncol(tmp)
+    NR   = nrow(tmp)
+    Mean = rowMeans(tmp[,3:NC])    
+    sABmean[[i]] = cbind(tmp[,1:2],Mean)
+    names(sABmean)[i] = names(sAB)[i]
+
+
+    Sd <- rep(0,NR)
+    for( j in 1:NR ){
+        Sd[j] = sd(tmp[j,3:NC])
+    }
+
+    sABsd[[i]] = cbind(tmp[,1:2],Sd)
+    names(sABsd)[i] = names(sAB)[i]
+}
+
+# read results for randomising gene-disease annotation
+dfPSP = read.table(sprintf("../RESULTS/%s/ovg/Disease_overlap_sig.csv",subDIR[S]),sep="\t",header=T,stringsAsFactors=F,quote="", check.names=F)
+dfPSP = formatData(dfPSP,"PSP")
+
+
+NC = 2+length(sAB)
+NR = nrow(sAB[[1]])
+
+dfMean <- matrix(NA,ncol=NC,nrow=NR)
+dfMean[,1] = as.character(unlist(sABmean[[1]][,1]))
+dfMean[,2] = as.character(unlist(sABmean[[1]][,2]))
+dfMean[,3] = as.numeric(unlist(sABmean[[1]][,3]))
+
+dfSd <- matrix(NA,ncol=NC,nrow=NR)
+dfSd[,1] = as.character(unlist(sABsd[[1]][,1]))
+dfSd[,2] = as.character(unlist(sABsd[[1]][,2]))
+dfSd[,3] = as.numeric(unlist(sABsd[[1]][,3]))
+
+dfZs <- matrix(NA,ncol=NC,nrow=NR)
+dfZs[,1] = as.character(dfPSP[,1])
+dfZs[,2] = as.character(dfPSP[,2])
+dfZs[,3] = 0#as.numeric(dfPSP[,5])
+
+dfPv <- matrix(NA,ncol=NC,nrow=NR)
+dfPv[,1] = as.character(dfPSP[,1])
+dfPv[,2] = as.character(dfPSP[,2])
+dfPv[,3] = 1#as.numeric(dfPSP[,6])
+
+for( i in 2:length(sAB) ){    
+    dfMean[,(i+2)] = as.numeric(unlist(sABmean[[i]][,3]))
+    dfSd[,(i+2)]   = as.numeric(unlist(sABsd[[i]][,3]))
+}
+
+for( i in 2:length(sAB) ){
+    dfZs[,(i+2)] = (as.numeric(dfMean[,3])-as.numeric(dfMean[,(i+2)]))/(as.numeric(dfSd[,(i+2)]))
+}
+
+for( i in 2:length(sAB) ){
+    pval = pnorm(-abs(as.numeric(dfZs[,(i+2)])))
+    dfPv[,(i+2)] = as.numeric(2*pval)
+}
+
+DF = massageData(dfPv,errorRate,targets=c("AD","HTN","MS","PD"), alpha=0.05)
+
+colours <- c("0"="#999999","1"="#436EEE")
+target  <- unique(as.vector(DF$pairs[grepl("HTN",as.vector(DF$pairs))]))
+
+    gplot <- ggplot(DF,aes(x=as.numeric(as.vector(DF[,2])),y=as.factor(DF[,1]),size=as.numeric(as.vector(DF[,3]))))+
+
+    geom_point(aes(colour = factor(DF[,4])))+
+    scale_size_identity()+
+    labs(x="error Rate",y="Disease pairs",title="")+
+        theme(legend.key=element_blank())+        
+        theme_bw()+
+        theme(panel.grid.major = element_line(colour = "grey40",size=0.2),
+              panel.grid.minor = element_line(colour="grey40",size=0.1),
+              panel.background = element_rect(fill = "white"))+
+        theme(axis.text.x = element_text(face="bold", size=rel(1.5)),
+              axis.text.y = element_text(face=makeBold(df$pairs,target),size=rel(1.5)),
+              axis.title.x=element_text(face="bold",size=rel(2.0)),
+              axis.title.y=element_text(face="bold",size=rel(2.0)),
+              legend.title=element_text(face="bold",size=rel(1.7)),
+              legend.text=element_text(face="bold",size=rel(1.7))
+              )+   
+        guides(size = FALSE, shape  = FALSE)+
+        scale_color_manual("p.value<=0.05",breaks=levels(factor(DF[,4])),values=colours,labels=c("No","Yes"))+       
+        scale_x_continuous(limits=c(0, 1), breaks=seq(0, 1, 0.2))   
+
+ggsave(gplot,file=sprintf("%s/randomEdges.svg",subDIR[S]), width=WIDTHcm, height=2*HEIGHTcm, units="cm");
+
+    png(sprintf("%s/randomEdges.png",subDIR[S]), width=WIDTH, height=2*HEIGHT, units = "px")
+print(gplot)
+dev.off()
+
+
+
