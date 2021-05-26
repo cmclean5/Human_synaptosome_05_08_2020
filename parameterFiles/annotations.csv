@@ -1,0 +1,19 @@
+1	flatfile_human_gene2HDO.csv	topOnto_ovg
+0	flatfile_chua.csv	chua
+0	SCH_flatfile.csv	SCH
+0	flatfile.interpro.Family.csv	Family
+0	flatfile.interpro.Domain.csv	Domain
+1	flatfile.go.MF.csv	GOMF
+1	flatfile.go.BP.csv	GOBP
+1	flatfile.go.CC.csv	GOCC
+0	celltypes_PMID27991900_L2.csv	CT_L2_PMID27991900
+0	celltypes_PMID27991900.csv	CT_PMID27991900
+0	celltypes_PMID25700174.csv	CT_PMID25700174
+0	celltypes_PMID27471252.csv	CT_PMID27471252
+0	celltypes_PMID27716510.csv	CT_PMID27716510
+0	celltypes_PMID28602351.csv	CT_PMID28602351
+0	Pathways_PMID25599223.csv	PW_PMID25599223
+0	Pathways_GOBP_PMID25599223.csv	GOBP_PMID25599223
+0	Pathways_GOMF_PMID25599223.csv	GOMF_PMID25599223
+0	Pathways_GOCC_PMID25599223.csv	GOCC_PMID25599223
+
