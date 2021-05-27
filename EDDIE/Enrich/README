@@ -1,0 +1,136 @@
+//----------------------------------------------
+// Package Name       : EnrichmentPackage  
+// Package Version    : v3r1
+// Package Description: Use of the Hypergeometric distribution,  
+//                    : to calculate enrichment in clustered PPI networks.
+// Date               : 2016
+// Author             : Colin D Mclean <Colin.D.Mclean@ed.ac.uk>
+// Copyright (C) 2016 Colin Mclean 
+//----------------------------------------------
+//      Package Description
+//----------------------------------------------
+// Use of the Hypergeometric distribution to calculate enrichment
+// in clustered PPI networks, built upon:
+// [1] the gamma function (and class) as given in Numerical Recipes 3rd Edition W. Press, S. Teukolsky, W. Vetterling, B. Flannery.
+// [2] M. Galassi et al, GNU Scientific Library Reference Manual (3rd Ed.), ISBN 0954612078.
+// [3] Pocklington A, Cumiskey D, Armstrong D, Grant S: The proteomes of neurotransmitter receptor complexes from modular networks
+//     with distributed functionality underlying plasticity and behaviour, MSB, 2, (2006).
+// [4] Alex T. Kalinka, The probablility of drawing intersections: extending the hypergeometric distribution, arXiv:1305.0717v5, (2014).
+// [5] Benjamini, Y., and Hochberg, Y. Controlling the false discovery rate:  a practical and powerful approach to multiple testing.
+//     Journal of the Royal Statistical Society Series B 57 (1995), 289–300.
+// [6] Benjamini, Y., and Liu, W. A step-down multiple hypotheses testing procedure that controls the false discovery rate under independence.
+//     Journal of Statistical Planning and Inference 82 (1999), 163–170.
+// [7] Benjamini, Y., and Yekutieli, D. (2001). The control of the false discovery rate in multiple testing under dependency. Annals of Statistics, 29, 1165-1188.
+//----------------------------------------------
+//      GNU General Public Licenses v3 
+//----------------------------------------------
+// This program is free software: you can redistribute it and/or modify it 
+// under the terms of the GNU General Public License as published by the 
+// Free Software Foundation, either version 3 of the License, or (at your 
+// option) any later version.
+//
+// This program is distributed in the hope that it will be useful, but 
+// WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY 
+// or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License 
+// (GNU_GPL_v3)  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//-----------------------------------------------
+/////////////////////////////////////////////////
+//-----------------------------------------------
+
+ 
+----------------------------
+*** TO INSTALL AND BUILD ***
+----------------------------
+
+(1) This package makes use of the GNU Scientific Library (GSL); upon request, we can provide an implementation which is independent of libraries, making use of the subroutines from Numerical Recipes We use the default location of the gsl directory at: /usr/local/include/gsl. If the directory is not installed on the standard search path of your compiler, you will also need to provide its location in the Makefile at: GSLCFLAGS = -I/location/to/your/gsl
+ However we can provide upon request, an implementation which is independent of libraries, making use of the subroutines found in Numerical Recipes 3rd Edition.
+
+(2) Running 'make' should build the executable called 'run'.
+
+
+(3) To see all options, and some command line examples, you can type the command: './run'.
+
+    
+----------------------------
+***       TO RUN         ***
+----------------------------
+
+The package makes use of the clustering results (of the respective graphs located in the Graphs directory) found the directory 'Clustering', and the annotation files stored in directory 'Annotation'. The directory 'parameterFiles' 
+
+To run the clustering package at the command line type the following:
+
+EXAMPLE 1:
+
+To run cluster enrichment of the Spectral method on the Presynaptic network for disease annotation:  
+> ./run -opt 1 -Comfile ../Clustering/PPI_Presynaptic_Published/Spectral_communities_cytoscape.csv -Annofile ../Annotations/flatfile_human_gene2HDO.csv
+
+EXAMPLE 2:
+
+To run cluster enrichment of the Spectral method on the Presynaptic network for the overlap of disease and synaptic functional annotation: 
+> ./run -opt 2 -Comfile  ../Clustering/PPI_Presynaptic_Published/Spectral_communities_cytoscape.csv -Annofile ../Annotations/flatfile_human_gene2HDO.csv -Annofile ../Annotations/SCH_flatfile.csv
+
+EXAMPLE 3:
+
+To run network level enrichment for disease, synaptic function and cell type annotation sets:  	
+> ./run -opt 4 -Comfile  ../Clustering/PPI_Presynaptic_Published/Spectral_communities_cytoscape.csv -Annofile ../Annotations/flatfile_human_gene2HDO.csv -Annofile ../Annotations/SCH_flatfile.csv -Annofile ../Annotations/celltypes_PMID27991900_L2.csv
+
+EXAMPLE 4:
+
+In addition to the single command line studies above, we also provide the bash scripts 'submitClustEnrch.sh' and 'submitOverlapEnrch.sh', to the enrichment package through various combinations of clustering results, annotation sets and graphs. This is controlled by the parameter files found in the folder '../parameterFiles'.
+
+EXAMPLE 5:
+
+For example, get the cluster enrichment results for algorithms: 'Spectral', 'infomap' and 'sgG5' for disease and synaptic functional groups on the presynaptic network, we would set:
+
+> emacs ../parameterFiles/graphs.csv
+
+1       PPI_Presynaptic_Published
+0       PPI_PSP_clean_Published
+0       PPI_PSP_reduced 
+
+> emacs ../parameterFiles/clusteringAlg.csv
+
+0	fc_communities_cytoscape.csv	fc
+0	lourvain_communities_cytoscape.csv	lourvain
+0	lec_communities_cytoscape.csv	lec
+1	Spectral_communities_cytoscape.csv	Spectral
+1	infomap_communities_cytoscape.csv	infomap
+0	sgG1_communities_cytoscape.csv	sgG1
+0	sgG2_communities_cytoscape.csv	sgG2
+1	sgG5_communities_cytoscape.csv	sgG5
+0	SVI_communities_cytoscape.csv	SVI
+0	wt_communities_cytoscape.csv	wt
+
+> emacs ../parameterFiles/annotations.csv
+
+2	flatfile_human_gene2HDO.csv	topOnto_ovg
+0	flatfile_chua.csv	chua
+1	SCH_flatfile.csv	SCH
+0	flatfile.interpro.Family.csv	Family
+0	flatfile.interpro.Domain.csv	Domain
+0	flatfile.go.MF.csv	GOMF
+0	flatfile.go.BP.csv	GOBP
+0	flatfile.go.CC.csv	GOCC
+0	celltypes_PMID27991900_L2.csv	CT_L2_PMID27991900
+0	celltypes_PMID27991900.csv	CT_PMID27991900
+0	celltypes_PMID25700174.csv	CT_PMID25700174
+0	celltypes_PMID27471252.csv	CT_PMID27471252
+0	celltypes_PMID27716510.csv	CT_PMID27716510
+0	celltypes_PMID28602351.csv	CT_PMID28602351
+0	Pathways_PMID25599223.csv	PW_PMID25599223
+0	Pathways_GOBP_PMID25599223.csv	GOBP_PMID25599223
+0	Pathways_GOMF_PMID25599223.csv	GOMF_PMID25599223
+0	Pathways_GOCC_PMID25599223.csv	GOCC_PMID25599223
+
+Then run:
+
+> ./submitClustEnrch.sh
+
+EXAMPLE 6:
+
+To get the clusteral enrichment overlaps for algorithms: 'Spectral', 'infomap' and 'sgG5' for disease and synaptic functional groups on the presynaptic network, we would then run:
+
+> ./submitOverlapEnrch.sh
+
