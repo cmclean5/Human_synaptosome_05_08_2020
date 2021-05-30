@@ -1,0 +1,28 @@
+
+------------------------- topONTdata object -------------------------
+
+ Description:
+   -   
+
+ Ontology:
+   -  HDO 
+
+ 17731 available genes (all genes from the array):
+   - symbol:  1 2 3 9 10  ...
+   - 4302  significant genes. 
+
+ 17731 feasible genes (genes that can be used in the analysis):
+   - symbol:  1 2 3 9 10  ...
+   - 4302  significant genes. 
+
+ Graph (nodes with at least  1  genes):
+   - a graph with directed edges
+   - number of nodes = 3457 
+   - number of edges = 3529 
+
+------------------------- topONTdata object -------------------------
+
+ ****** UNIVERSE GENE ENTREZ ID SIZE   17731 UNIVERSE HDO ID SIZE 3140 ****** 
+ ****** MY ENTREZ GENE LIST SIZE       5016 MY GENE LIST IN UNIVERSE SIZE 4302 ****** 
+ ****** NO: OF HDO IDS IN MY GENE LIST 2761 ****** 
+ ****** NO: LEVELS FOR BONFERRONI CORRECTION 3457
