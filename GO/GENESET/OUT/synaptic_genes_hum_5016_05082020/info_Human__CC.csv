@@ -1,0 +1,25 @@
+
+------------------------- topGOdata object -------------------------
+
+ Description:
+   -   
+
+ Ontology:
+   -  CC 
+
+ 19717 available genes (all genes from the array):
+   - symbol:  1 10 100 1000 10000  ...
+   - 4883  significant genes. 
+
+ 19717 feasible genes (genes that can be used in the analysis):
+   - symbol:  1 10 100 1000 10000  ...
+   - 4883  significant genes. 
+
+ GO graph (nodes with at least  1  genes):
+   - a graph with directed edges
+   - number of nodes = 2028 
+   - number of edges = 3792 
+
+------------------------- topGOdata object -------------------------
+
+ ****** NO: LEVELS FOR BONFERRONI CORRECTION 2028
