@@ -1,0 +1,3 @@
+Alg	FacComsEnriched_log2(FE)>0.5_log2(FE)<4.8	FacComsEnriched_log2(FE)>4.8_log2(FE)<8.0
+Spectral	0.591836734693878	0.255102040816327
+louvain2	0.296296296296296	0.508417508417508
